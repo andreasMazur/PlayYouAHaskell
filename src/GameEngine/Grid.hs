@@ -15,16 +15,19 @@ import Data.Array.IO
       readArray,
       writeArray,
       MArray(getBounds) )
-import Data.List ( (\\) )
-import System.Console.ANSI ( setCursorColumn, setCursorPosition )
-import GHC.IO (unsafePerformIO)
+import Data.List
+    ( (\\) )
+import System.Console.ANSI 
+    ( setCursorColumn,
+      setCursorPosition )
+import GHC.IO 
+    ( unsafePerformIO )
 
 
 type Dimension = (Int, Int)
 type StartIndex = (Int, Int)
 
-
-{-
+{-|
     In general, PYaH uses grids to display information.
     A grid tells where to put a character on the screen.
     Which characters are shown lies in the hand of the
@@ -32,12 +35,14 @@ type StartIndex = (Int, Int)
 
     Grids are nothing more than mutable Arrays. Thus, we
     can modify information in-place when necessary.
--}
 
--- | Grid type
+    NOTE! The first Index of an element in the grid has the index (1,1)
+-}
 type Grid = IOArray Dimension Char
 
-showGrid:: Grid -> String
+-- | Casts a grid into a string that can be stored in a save-game file
+showGrid:: Grid -- ^ The grid to save
+        -> String -- ^ The result string
 showGrid grid =  "<GridStr>" ++ gridStr ++ "</GridStr>\n"
               ++ "<GridDim>" ++ (show gridDim) ++ "</GridDim>\n"
     where
@@ -50,29 +55,29 @@ gridInfos grid = (fst.last $ gridElems, map snd gridElems)
         gridElems:: [(Dimension, Char)]
         gridElems = unsafePerformIO.getAssocs $ grid
 
--- | First index in a grid
 fstIndexInGrid:: StartIndex
 fstIndexInGrid = (1, 1)
 
--- | 'Dimension' : The dimension respectively the largest index in the grid
--- | '[a]'          : The list, that shall be converted to a grid
--- | NOTE! The first Index of an element in the grid has the index (1,1)
-createGrid:: Dimension -> String -> IO Grid
+-- | Create a new grid
+createGrid:: Dimension -- ^ The dimension respectively the largest index in the grid
+          -> String -- ^ The string, that shall be converted to a grid
+          -> IO Grid -- ^ A Grid
 createGrid dimension appearence 
     = newListArray (fstIndexInGrid, dimension) appearence
 
--- | This function displays a grid on the terminal.
--- | 'Grid'   : The grid that shall be displayed
--- | 'StartIndex'  : The starting (row, column) for printing
-displayGrid:: Grid -> StartIndex -> IO ()
+-- | Display a grid on the terminal
+displayGrid:: Grid -- ^ The grid that shall be displayed
+           -> StartIndex -- ^ The starting (row, column) for printing
+           -> IO ()
 displayGrid grid (rowOffset, colOffset) 
     = do elements <- getAssocs grid
          setCursorPosition rowOffset colOffset
          displayRectangle colOffset elements
 
--- | 'Int'                  : The starting column for printing
--- | '[(StartIndex, Char)]' : (Index, Element) of a grid
-displayRectangle:: Int -> [(StartIndex, Char)] -> IO ()
+-- | Display a rectangle on the terminal
+displayRectangle:: Int -- ^ The starting column for printing
+                -> [(StartIndex, Char)] -- ^ (Index, Element) of a grid
+                -> IO ()
 displayRectangle _ [] = return ()
 displayRectangle offset rectangle@(((currentLine, _), _) : _)
     = do setCursorColumn offset
@@ -91,12 +96,10 @@ displayRectangle offset rectangle@(((currentLine, _), _) : _)
    the indices in the background grid from which we read respectively
    paste into. These are computed with this function. 
 -}
-
--- | 'Grid'  : The grid from which we read or paste into
--- | 'Grid'  : The grid in which we store the read or paste from
--- | 'StartIndex' : The start index in the background grid from which
---                  the read respectively paste-into procedure starts.
-computeIndicesInBackgroundGrid:: Grid -> StartIndex -> IO [(Int, Int)]
+computeIndicesInBackgroundGrid:: Grid -- ^ The grid in which we store the read or paste from
+                              -> StartIndex -- ^ The start index in the background grid from which the read respectively
+                                            --   paste-into procedure starts.
+                              -> IO [(Int, Int)] -- ^ Background grid indices
 computeIndicesInBackgroundGrid  foregroundGrid startIndex
     = do boundsForegroundGrid <- getBounds foregroundGrid
          let heightInBackgroundGrid 
@@ -111,11 +114,10 @@ computeIndicesInBackgroundGrid  foregroundGrid startIndex
                           , y <- widthIndicesInBackgroundGrid]
 
 -- | Copy and pastes a grid onto another grid for given indices
--- | 'Grid'               : The grid that shall be modified
--- | 'Grid'               : The grid from which shall be copied
--- | ((bgIndex, fgIndex) : xs) : The indices
-copyPaste:: Grid -> Grid -> [((Int, Int), (Int, Int))] 
-            -> IO Grid
+copyPaste:: Grid -- ^ The grid in which copied values will be stored
+         -> Grid -- ^ The grid from which shall be copied
+         -> [((Int, Int), (Int, Int))] -- ^ The indices ((bgIndex, fgIndex) : xs)
+         -> IO Grid -- ^ A (partially) copied grid
 copyPaste toModify _ [] = return toModify
 copyPaste toModify toPaste ((bgIndex, fgIndex) : xs)
      = do char <- readArray toPaste fgIndex
@@ -123,20 +125,20 @@ copyPaste toModify toPaste ((bgIndex, fgIndex) : xs)
           copyPaste toModify toPaste xs
 
 -- | Write multiple grids on one grid
--- | 'Grid'  : The grid in which we paste into
--- | '[Grid]'  : The grids from which we paste into 'toModify'
--- | '[(Int, Int)]' : The start indeces in 'toModify' from which we start pasting.
-writeMGrids:: Grid -> [Grid] -> [(Int, Int)] -> IO Grid
+writeMGrids:: Grid -- ^ The grid in which we paste into
+           -> [Grid] -- ^ The grids from which we paste into 'toModify'
+           -> [(Int, Int)] -- ^ The start indices in 'toModify' from which we start pasting
+           -> IO Grid -- ^ The result grid
 writeMGrids toModify [] [] = return toModify
 writeMGrids toModify (toPaste : xs) (startIndex : ys)
     = do newToModify <- writeGrid toModify toPaste startIndex
          writeMGrids newToModify xs ys
 
 -- | Write a grid onto another grid
--- | 'Grid'  : The grid in which we paste into
--- | 'Grid'  : The grid from which we paste into 'toModify'
--- | '(Int, Int)' : The start index in 'toModify' from which we start pasting.
-writeGrid:: Grid -> Grid -> (Int, Int) -> IO Grid
+writeGrid:: Grid -- ^ The grid in which we paste into
+         -> Grid -- ^ The grid from which we paste into 'toModify'
+         -> (Int, Int) -- ^ The start index in 'toModify' from which we start pasting
+         -> IO Grid -- ^ The result grid
 writeGrid toModify toPaste startIndex
     = do bgIndices <- computeIndicesInBackgroundGrid toPaste startIndex
          boundsToPasteArray <- getBounds toPaste
@@ -146,10 +148,10 @@ writeGrid toModify toPaste startIndex
          copyPaste toModify toPaste zipedIndices
 
 -- | Read from a grid
--- | 'Grid'  : The grid from which we read
--- | 'Grid'  : The grid in which we store the read elements
--- | '(Int, Int)' : The start index in 'readFrom' from which we start reading
-readGrid:: Grid -> Grid -> (Int, Int) -> IO Grid
+readGrid:: Grid -- ^ The grid from which we read
+        -> Grid -- ^ The grid in which we store the read elements
+        -> (Int, Int) -- ^ The start index in 'readFrom' from which we start reading
+        -> IO Grid -- ^ The read grid
 readGrid readFrom storeIn startIndex
     = do bgIndices <- computeIndicesInBackgroundGrid storeIn startIndex
          boundsToStoreInArray <- getBounds storeIn

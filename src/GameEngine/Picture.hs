@@ -6,6 +6,11 @@ import GameEngine.PinUtilities (alterPin', showMultiplePins,  setStatus )
 import {-# SOURCE #-} GameEngine.Call ( Call )
 import Control.Monad.State
 
+{-|
+    A 'Picture' represents a static environment where no physics are active.
+    It therefore contains 'Pin's (not 'Object's) as elements. The purpose of
+    a 'Picture'-environment can be menus or textboxes for example.
+-}
 data Picture = Picture {
     pinboard :: Pin,
     pins :: [Pin],

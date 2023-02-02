@@ -37,7 +37,7 @@ type StartIndex = (Int, Int)
 arrowLowest:: Int
 arrowLowest = 1
 
--- | Highest row for the arrow-pin
+-- | Highest row for the arrow-pin (first for menu, second for multi-use box)
 arrowHighest:: (Int, Int)
 arrowHighest = (6, 10)
 
@@ -45,12 +45,15 @@ arrowHighest = (6, 10)
 startColumn:: Int
 startColumn = 4
 
+-- | Arrow 'Pin' ID
 arrowID:: Identifier
 arrowID = 0
 
+-- | Start position within menu
 arrowStartIndex:: StartIndex
 arrowStartIndex = (0, 1)
 
+-- | Arrow-'Pin'
 arrow:: IO Pin
 arrow = createPin' "->" (1, 2) arrowStartIndex arrowID []
 
@@ -59,36 +62,36 @@ arrow = createPin' "->" (1, 2) arrowStartIndex arrowID []
 -- | Computes the start-index of the first new pin, that shall be added to the
 --   interaction menu.
 -- | 'a' : The interaction menu, in which the start-index shall be computed
-computeStartIndex:: Pinboard a => a -> Int
+computeStartIndex:: Pinboard a => a -- ^ 
+                               -> Int
 computeStartIndex pb = let startIndices = [fst.startIndex $ p | p <- pins pb]
                        in case startIndices of [] -> 0
                                                _  -> (last startIndices) + 1
 
--- | Displays exactly these interactions and pin-calls, which are passed as 
---   arguments to this functions. Everything else will be removed.
--- | '[Interaction]' : The interactions that shall be displayed
--- | '[PinCall]'     : The pin-calls that shall be displayed
-updateIBoxCalls:: [Call] -> [Call] -> UpdatePinboard
+{-|
+    Displays exactly the calls, which are passed as arguments to this functions.
+    Everything else will be removed.
+-}
+updateIBoxCalls:: [Call] -- ^ The default-calls
+               -> [Call] -- ^ The additional calls
+               -> UpdatePinboard
 updateIBoxCalls defaultCalls calls pb
-    = let oldCalls = filter (not.persistence)
-                   $ concat [calls_pin p | p <- pins pb]
+    = let oldCalls = filter (not.persistence) $ concat [calls_pin p | p <- pins pb]
           calls2Remove = oldCalls \\ calls
       in do newPb <- removeIBoxCalls calls2Remove pb
             addNewIBoxCalls (defaultCalls ++ calls) newPb
 
 -- | Adds ONLY NEW interactions and pin-calls to the interaction menu.
--- | '[Interaction]' : The interactions that shall be added
--- | '[PinCall]'     : The pin-calls that shall be added
-addNewIBoxCalls:: [Call] -> UpdatePinboard
+addNewIBoxCalls:: [Call] -- ^ The calls that shall be added
+               -> UpdatePinboard
 addNewIBoxCalls calls pb
     = let oldCalls = concat [calls_pin p | p <- pins pb]
           calls2Add = calls \\ oldCalls
       in addIBoxCalls calls2Add pb
 
--- | Adds ALL listed interactions and pin-calls to the interaction menu.
--- | '[Interaction]' : The interactions that shall be added
--- | '[PinCall]'     : The pin-calls that shall be added
-addIBoxCalls:: [Call] -> UpdatePinboard
+-- | Adds ALL listed calls to the interaction menu.
+addIBoxCalls:: [Call] -- ^ The calls that shall be added
+            -> UpdatePinboard
 addIBoxCalls calls pb
     = do let startIndex = computeStartIndex pb
          calls <- sequence [ createPin' (description call)
@@ -99,10 +102,9 @@ addIBoxCalls calls pb
                             | (id, call) <- zip [startIndex..] calls ]
          addPins calls pb
 
--- | Removes the listed interactions and pin-calls.
--- | '[Interaction]' : The interactions that shall be removed
--- | '[PinCall]'     : The pin-calls that shall be removed
-removeIBoxCalls:: [Call] -> UpdatePinboard
+-- | Removes the listed calls.
+removeIBoxCalls:: [Call] -- ^ The calls that shall be removed
+               -> UpdatePinboard
 removeIBoxCalls calls pb
     = let leftPins = [ p | p <- pins pb, checkCalls $ calls_pin p ]
           newPins = [ execState (alterPin' (combinatorFunc (id, startColumn) (id + 1))) p
@@ -128,7 +130,8 @@ moveArrowUp pin
         else pin
 
 -- | Function that moves the arrow-pin one row down
-moveArrowDown:: Identifier -> UpdatePin
+moveArrowDown:: Identifier  -- ^ menu ID (i.e. pinboard ID)
+             -> UpdatePin
 moveArrowDown id pin
     = if id_pin pin == arrowID
         then if fst (startIndex pin) <= decision id
@@ -137,6 +140,7 @@ moveArrowDown id pin
                else pin
         else pin
 
+-- | Selects highest arrow row depending on selected menu
 decision:: Identifier -> Int
 decision id
     | id == interBoxID    = fst arrowHighest
@@ -175,9 +179,12 @@ interactionMenu pb
                                             return $ addCalls [removeInteractionsPg $ calls_pin pinCall] newPb3
              _ -> interactionMenu pb
 
--- | Function that transitions the user-activity from the playground-pinboard 
---   to the interaction menu-pinboard
-enterMenu:: Identifier -> UpdatePinboard
+{-|
+    Function that transitions the user-activity from the playground-pinboard 
+    to the interaction menu-pinboard.
+-}
+enterMenu:: Identifier -- ^ menu ID (i.e. pinboard ID)
+         -> UpdatePinboard
 enterMenu id pb
     = if id_pb pb == id
         then do a <- arrow

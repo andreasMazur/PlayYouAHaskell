@@ -47,15 +47,15 @@ removeCalls inters pin = pin { calls_pin = leftCalls }
 
 -- ## MISC ##
 
--- | Create grid-information
-createPin:: String 
-         -> Dimension
-         -> StartIndex
-         -> Identifier 
-         -> [Call] 
-         -> Bool 
-         -> Bool 
-         -> [Item] 
+-- | Create a 'Pin'
+createPin:: String -- ^ The appearence of the 'Pin'
+         -> Dimension -- ^ The size of the 'Pin'
+         -> StartIndex -- ^ The start-index of the 'Pin'
+         -> Identifier -- ^ The ID of the 'Pin'
+         -> [Call] -- ^ The 'Call's that the 'Pin' shall contain
+         -> Bool -- ^ Whether the 'Pin' is rigid
+         -> Bool -- ^ Whether the 'Pin' is located in the background
+         -> [Item] -- ^ The 'Item's the 'Pin' shall hold
          -> IO Pin
 createPin appearence dimension startIndex id calls fixed inBg inventory
   = do grid <- createGrid dimension appearence
@@ -70,17 +70,24 @@ createPin appearence dimension startIndex id calls fixed inBg inventory
         inventory = inventory
        }
 
-createPin':: String -> Dimension -> StartIndex -> Identifier -> [Call] -> IO Pin
+-- | Creates a default 'Pin' that is rigid, not in the background without any 'Item's
+createPin':: String -- ^ The appearence of the 'Pin'
+          -> Dimension -- ^ The size of the 'Pin'
+          -> StartIndex -- ^ The start-index of the 'Pin'
+          -> Identifier -- ^ The ID of the 'Pin'
+          -> [Call] -- ^ The 'Call's that the 'Pin' shall contain
+          -> IO Pin
 createPin' appearence dimension startIndex id calls
   = createPin appearence dimension startIndex id calls True False []
 
-createPinWithGrid:: (IO Grid)
-                 -> StartIndex
-                 -> Identifier 
-                 -> [Call]
-                 -> [Item]
-                 -> Bool
-                 -> Bool
+-- | Creates a 'Pin' with a 'Grid' instead of a 'String'
+createPinWithGrid:: (IO Grid) -- ^ The appearence of the 'Pin'
+                 -> StartIndex -- ^ The size of the 'Pin'
+                 -> Identifier -- ^ The ID of the 'Pin'
+                 -> [Call] -- ^ The 'Call's that the 'Pin' shall contain
+                 -> [Item] -- ^ The 'Item's the 'Pin' shall hold
+                 -> Bool -- ^ Whether the 'Pin' is rigid
+                 -> Bool -- ^ Whether the 'Pin' is located in the background
                  -> IO Pin
 createPinWithGrid givenGrid startIndex id calls items rig inBg 
     = do g <- givenGrid
@@ -95,9 +102,9 @@ createPinWithGrid givenGrid startIndex id calls items rig inBg
           inventory = items
          }
 
--- | Alters a pin.
--- | 'UpdatePin' : The function used to modify the pin
-alterPin:: UpdatePin -> StateT Pin IO Pin
+-- | Alters a pin. (uses 'State'-transformer monad with IO)
+alterPin:: UpdatePin -- ^ The function used to modify the 'Pin'
+        -> StateT Pin IO Pin
 alterPin f = do initialPin <- get
                 modify f
                 pin <- get
@@ -107,9 +114,9 @@ alterPin f = do initialPin <- get
                           put newPin  -- store the new pin
                           return initialPin
 
--- | Alters a pin.
--- | 'UpdatePin' : The function used to modify the pin
-alterPin':: UpdatePin -> State Pin Pin
+-- | Alters a pin. (uses simple 'State' monad)
+alterPin':: UpdatePin -- ^ The function used to modify the 'Pin'
+         -> State Pin Pin
 alterPin' f = do initialPin <- get
                  modify f
                  pin <- get
@@ -120,8 +127,8 @@ alterPin' f = do initialPin <- get
                            return initialPin
 
 -- | Prints a pin.
--- | 'Offset' : An offset given by the pin's pinboard
-printPin:: Offset -> StateT Pin IO Pin
+printPin:: Offset -- ^ An offset given by the 'Pin's 'Pinboard'
+        -> StateT Pin IO Pin
 printPin (yOffset, xOffset)
     = do pin <- get
          if hasChanged pin
@@ -131,8 +138,9 @@ printPin (yOffset, xOffset)
                    return pin
            else return pin
 
--- | TODO
-printPinWithColor:: Offset -> StateT Pin IO Pin
+-- | TODO (Shall print a singular 'Pin' in a given color)
+printPinWithColor:: Offset 
+                 -> StateT Pin IO Pin
 printPinWithColor (yOffset, xOffset)
     = do pin <- get
          if hasChanged pin
@@ -144,21 +152,24 @@ printPinWithColor (yOffset, xOffset)
                    return pin
            else return pin
 
--- | Forces to print the pin.
--- | 'Pin' : The pin that shall be printed.
+-- | Forces to print the given 'Pin'
 forcePrintPin:: UpdatePin
 forcePrintPin pin = pin { hasChanged = True }
 
--- | Move the pin for an offset (y, x)
-movePin:: Offset -> UpdatePin
+-- | Move the pin for an offset
+movePin:: Offset -- ^ The offset (y, x) by which the 'Pin' shall be moved
+       -> UpdatePin
 movePin (y, x) pin = let (originalY, originalX) = startIndex pin
                      in pin { startIndex = (originalY + y, originalX + x) }
 
-showMultiplePins:: [Pin] -> String
+-- | Converts a list of 'Pin's into 'String's
+showMultiplePins:: [Pin] -- ^ The 'Pin's to convert
+                -> String
 showMultiplePins [] = ""
 showMultiplePins (p : ps) = show p ++ showMultiplePins ps
 
 -- | Change the Appearence of a pin
-changeAppearence:: Grid -> UpdatePin
+changeAppearence:: Grid -- ^ The new appearence
+                -> UpdatePin
 changeAppearence newGrid pin = pin { grid = newGrid
                                    , hasChanged = True } 

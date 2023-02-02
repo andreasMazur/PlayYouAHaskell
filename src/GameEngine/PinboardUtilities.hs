@@ -30,16 +30,16 @@ type Offset = (Int, Int)
 type StartIndex = (Int, Int)
 
 -- | Alter a pinboard.
--- | 'UpdatePinboard' : The function used to modify the pinboard.
-alterPinboard:: Pinboard a => UpdatePinboard -> StateT a IO a
+alterPinboard:: Pinboard a => UpdatePinboard -- ^ The function used to modify the pinboard
+                           -> StateT a IO a
 alterPinboard f = do pinboardInitial <- get
                      pinboardNew <- liftIO $ f pinboardInitial
                      put pinboardNew
                      return pinboardInitial
 
 -- | Applies a function onto the pinboard-root
--- | 'UpdatePin' : The function used to modify the pinboard.
-alterPinboardRoot:: Pinboard a => UpdatePin -> StateT a IO a
+alterPinboardRoot:: Pinboard a => UpdatePin -- ^ The function used to modify the pinboard-root
+                               -> StateT a IO a
 alterPinboardRoot f = do pb <- get
                          (_, newPb) <- liftIO $ runStateT (alterPin f)
                                               $ background pb
@@ -47,8 +47,8 @@ alterPinboardRoot f = do pb <- get
                          return pb
 
 -- | Print a pinboard. (Lazily!)
--- | 'Offset' : An offset given by the root-window's start-index.
-printPinboard:: Pinboard a => Offset -> StateT a IO a
+printPinboard:: Pinboard a => Offset -- ^ An offset given by the root-window's start-index
+                           -> StateT a IO a
 printPinboard prevOffset@(offsetGuiY, offsetGuiX)
     = do pb <- get
          let (offsetPbY, offsetPbX) = startIndex.background $ pb
@@ -66,8 +66,8 @@ printPinboard prevOffset@(offsetGuiY, offsetGuiX)
          return pb
 
 -- | Erases all pins from the terminal which have been changed.
--- | '(a, a)' : (The old pinboard, The new pinboard)
-clearPinboard:: Pinboard a => (a, a) -> IO ()
+clearPinboard:: Pinboard a => (a, a) -- ^ (The old pinboard, The new pinboard)
+                           -> IO ()
 clearPinboard (oldPb, newPb)
     = do bg <- newBground
          eraser <- mapM (createEraser bg) $ zip changedPins startIndicesChangedPins
@@ -129,14 +129,17 @@ clearPinboard (oldPb, newPb)
             = any (collision (createAABBForPin pin) . createAABBForPin)
                   (pins oldPb)
 
--- | A function to modify the pins of a pinboard
--- | 'UpdatePin' : The function that shall update the pins
-accessPins:: UpdatePin -> UpdatePinboard
+-- | A function to modify the 'Pin's of a pinboard.
+accessPins:: UpdatePin -- ^ The function that shall update the pins
+          -> UpdatePinboard
 accessPins f pb = do alteredPins <- mapM (runStateT $ alterPin f) (pins pb)
                      let newPins = map snd alteredPins
                      return $ exchangePins newPins pb
 
-alterSpecificPin:: UpdatePin -> Identifier -> UpdatePinboard
+-- | A function to modify a specific 'Pin'.
+alterSpecificPin:: UpdatePin -- ^ The function to apply onto the target 'Pin'
+                -> Identifier -- ^ The ID of the target 'Pin'
+                -> UpdatePinboard
 alterSpecificPin f id pb
     = do let alteredPins = [alterP p | p <- pins pb]
          return $ exchangePins alteredPins pb
@@ -146,57 +149,74 @@ alterSpecificPin f id pb
             | id_pin pin == id = execState (alterPin' f) pin
             | otherwise = pin
 
--- | A function to add a pin to a pinboard
--- | 'Pin' : The pin that shall be added
-addPin:: Pin -> UpdatePinboard
+-- | A function to add a 'Pin' to a 'Pinboard'
+addPin:: Pin -- ^ The 'Pin' that shall be added
+      -> UpdatePinboard
 addPin p pb = let newPins = p : pins pb
               in return $ exchangePins newPins pb
 
--- | A function to add multiple pins to a pinboard
--- | '[Pin]' : The pins to add
-addPins :: [Pin] -> UpdatePinboard
+-- | A function to add multiple pins to a 'Pinboard'
+addPins:: [Pin] -- ^ The 'Pin's to add
+       -> UpdatePinboard
 addPins [] pb = return pb
 addPins (p:ps) pb = do newPb <- addPin p pb
                        addPins ps newPb
 
-addPin':: Pinboard a => Pin -> a -> a
+-- | A function to add a 'Pin' to a 'Pinboard' (without IO monad)
+addPin':: Pinboard a => Pin -- ^ The 'Pin' that shall be added
+                     -> a -- ^ The 'Pinboard' in which the 'Pin' shall be added
+                     -> a
 addPin' p pb = let newPins = p : pins pb
                in exchangePins newPins pb
 
-addPins':: Pinboard a => [Pin] -> a -> a
+-- | A function to add multiple pins to a 'Pinboard' (without IO monad)
+addPins':: Pinboard a => [Pin] -- ^ The 'Pin's to add
+                      -> a -- ^ The 'Pinboard' in which the 'Pin's shall be added
+                      -> a
 addPins' ps pb = foldl (flip addPin') pb ps
 
--- | A function to remove a pin from a pinboard
--- | 'Identifier' : The id of the pin that shall be removed
-removePins:: [Identifier] -> UpdatePinboard
+-- | A function to remove a 'Pin' from a 'Pinboard'
+removePins:: [Identifier] -- ^ The ID of the 'Pin' that shall be removed
+          -> UpdatePinboard
 removePins ids pb = let newPins = [pin | pin <- pins pb
                                        , id_pin pin `notElem` ids]
                      in return $ exchangePins newPins pb
 
+-- | A function to remove all 'Pin's from a given 'Pinboard'
 removeAllPins:: UpdatePinboard
 removeAllPins pb = return $ exchangePins [] $ setStatus True pb
 
-getPins:: Pinboard a => Identifier -> a -> [Pin]
+-- | Returns the 'Pin's with a specific ID of a given 'Pinboard'
+getPins:: Pinboard a => Identifier -- ^ The ID of the target 'Pin's
+                     -> a -- ^ The 'Pinboard' from which to fetch the 'Pin's
+                     -> [Pin]
 getPins id pb = [pin | pin <- pins pb, id_pin pin == id]
 
 -- | A function to reset the terminal
 forcePrintPinboard:: UpdatePinboard
 forcePrintPinboard = accessPins forcePrintPin
 
--- | A function to add calls to existing calls
--- | '[Call]' : The calls that shall be added
-addCalls:: Pinboard a => [Call] -> a -> a
+-- | A function to add calls to existing 'Call's
+addCalls:: Pinboard a => [Call] -- ^ The 'Call's that shall be added
+                      -> a -- ^ The 'Pinboard' to which the 'Call's shall be added
+                      -> a
 addCalls calls pb
     = setCalls (getCalls pb ++ map (setInitiator $ id_pb pb) calls) pb
 
 -- | Print a pinboard without waiting for the game loop
-printPinboardNoLoop:: Pinboard a => a -> a -> IO a
+printPinboardNoLoop:: Pinboard a => a -- ^ The 'Pinboard' to print
+                                 -> a -- ^ The old state of the 'Pinboard' to print
+                                 -> IO a
 printPinboardNoLoop newPb pb
     = do clearPinboard (pb, newPb)
          (_, newPb2) <- runStateT (printPinboard (0, 0)) newPb
          return newPb2
 
-changeAppearenceOfPin:: Int -> String -> (Int, Int) -> UpdatePinboard
+-- | Changes the appearence of a 'Pin'
+changeAppearenceOfPin:: Identifier -- ^ The ID of the target 'Pin'
+                     -> String -- ^ The new look of the 'Pin'
+                     -> (Int, Int) -- ^ The dimension of the target 'Pin'
+                     -> UpdatePinboard
 changeAppearenceOfPin pinId newAppearence dim pb
     = do newGrid <- createGrid dim newAppearence
          alterSpecificPin (changeAppearence newGrid) pinId pb

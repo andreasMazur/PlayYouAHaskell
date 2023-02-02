@@ -17,6 +17,10 @@ type UpdateObject = Object -> Object
 type Identifier = Int
 type Offset = (Int, Int)
 
+{-|
+    An object adds the necessary information to a 'Pin' that allows to put the 'Pin'
+    into a 'Playground', where physics actively affect the 'Pin'.
+-}
 data Object = Object {
     object :: Pin,
     shape :: AABB,
@@ -34,7 +38,8 @@ instance Show Object where
             ++ "<Restitution>" ++ (show $ restitution obj) ++ "</Restitution>\n"
             ++ "</Object>\n"
 
-showMultipleObjects:: [Object] -> String
+showMultipleObjects:: [Object] -- ^ 
+                   -> String
 showMultipleObjects [] = ""
 showMultipleObjects (o : os) = show o ++ showMultipleObjects os
 
@@ -79,7 +84,9 @@ removeItemsObj items obj = obj { object = execState (alterPin' $ removeItems ite
 
 -- ## MISC ##
 
-createObject:: Pin -> Object
+-- | Create an object out of a 'Pin'
+createObject:: Pin -- ^ The 'Pin' that shall become an object
+            -> Object
 createObject pin
     = Object {
            object = pin,
@@ -108,7 +115,8 @@ createObject' pin ma _ res
 
 
 -- | Updates an object
-alterObject:: UpdateObject -> State Object Object
+alterObject:: UpdateObject -- ^ The function to apply onto the object
+           -> State Object Object
 alterObject g
     = do initialObj <- get
          modify g

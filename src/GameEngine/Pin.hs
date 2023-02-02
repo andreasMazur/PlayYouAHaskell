@@ -9,16 +9,26 @@ type UpdatePin = Pin -> Pin
 type StartIndex = (Int, Int)
 type Identifier = Int
 
--- | A pin-value contains information about a grid's access and its
---   appearence. It is used to represent "objects" within a pinboard.
+
+{-|
+    A 'Pin' is used to represent an element in PYaH.
+-}
 data Pin = Pin {
+    -- | The appearence of the element is given by a 'Grid'
     grid :: Grid,
+    -- | The start index (top left corner of 'Grid') tells where the element is located in the parent 'Pinboard'
     startIndex :: StartIndex,
+    -- | Simple integer ID to distinguish the element from other elements in the 'Pinboard'
     id_pin :: Identifier,
+    -- | A flag to indicate that the element has changed and thus needs to be updated by the game loop
     hasChanged :: Bool,
+    -- | A set of 'Call's that can be uploaded from the 'Pin' to the 'Pinboard' (this will execute the 'Call')
     calls_pin :: [Call],
+    -- | A flag to indicate that this element does not move
     rigid :: Bool,
+    -- | A flag to indicate that this element is located in the background (no collision)
     inBackground :: Bool,
+    -- | The inventory of the element
     inventory :: [Item]
 }
 

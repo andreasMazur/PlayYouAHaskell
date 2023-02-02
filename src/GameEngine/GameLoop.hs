@@ -7,6 +7,7 @@ import Control.Monad.State (
     StateT 
  )
 import System.Timeout (timeout)
+import System.Console.ANSI (showCursor, setCursorPosition, clearScreen)
 
 import GameEngine.GUI (
     GUI(..),
@@ -17,25 +18,35 @@ import GameEngine.GUI (
  )
 import GameEngine.CallHandler ( callHandler )
 import GameEngine.UserInput ( readUserInput )
+import GameEngine.RegisterHandler (itemParser, callParser)
 
 import GameConfig.KeyBindings ( Update(..), findBinding )
 
 import Physics.PhysicsHandler ( applyPhysics )
-import GameEngine.RegisterHandler (itemParser, callParser)
-import System.Console.ANSI (showCursor, setCursorPosition, clearScreen)
 
+{-|
+    The update rate sets the game speed. Smaller update rates allow a more frequent
+    game update, which causes the game to run faster. Higher update rates let the
+    game run slower.
+-}
 update_rate:: Int
 update_rate = 50000
 
+-- | Update rate when debugging PYaH
 update_rate_debug_mode:: Int
 update_rate_debug_mode = 1000000
 
+-- | Starts PYaH
 initGame:: StateT GUI IO GUI
 initGame = do callHandler
               gui <- get
               drawGame gui
               gameLoop
 
+{-|
+    The game-loop reads user inputs as well as controls the order of the 'callHandler'
+    and 'physics'-updates.
+-}
 gameLoop:: StateT GUI IO GUI
 gameLoop = do gui <- get
               inTime <- liftIO $ timeout update_rate readUserInput
@@ -57,15 +68,21 @@ gameLoop = do gui <- get
                                 drawGame gui
                                 gameLoop
 
-updatePinboards:: Update -> StateT GUI IO GUI
+-- | Applies changes on roots, pinboards and playgrounds
+updatePinboards:: Update -- ^ The changes to apply on roots, pinboards and playground
+               -> StateT GUI IO GUI
 updatePinboards update = do alterGUIRoots $ updatePin update
                             alterGUI $ updatePinboard update
                             callHandler
 
-physics:: Update -> StateT GUI IO GUI
+-- | Applies changes, which are caused by physics, onto the playground
+physics:: Update -- ^ The physics-changes to apply on the playground
+       -> StateT GUI IO GUI
 physics update = do applyPhysics $ updatePlayground update
                     callHandler
 
-drawGame:: GUI -> StateT GUI IO GUI
+-- | Draws the game by clearing the 'GUI' and subsequently drawing the updates
+drawGame:: GUI -- ^ The 'GUI' to draw
+        -> StateT GUI IO GUI
 drawGame gui = do clearGUI gui
                   printGUI

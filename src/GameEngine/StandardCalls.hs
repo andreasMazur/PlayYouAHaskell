@@ -40,20 +40,23 @@ type StartIndex = (Int, Int)
 defaultCalls:: [Call]
 defaultCalls = [saveGame, loadGame]
 
--- | A call that display interactions in the interaction box
-updateCalls:: [Call] -> Call
+-- | A 'Call' that displays the given and default 'Call's in the interaction box (and removes all other 'Call's)
+updateCalls:: [Call] -- ^ The 'Call's to display
+           -> Call
 updateCalls calls = createCall (-2) "display pins" interBoxID (updateIBoxCalls defaultCalls calls) id False "updateCalls"
 
--- | A call that displays pin-calls in the interaction box
-displayPinCalls:: [Call] -> Call
+-- | A 'Call' that adds new 'Call's into the interaction box
+displayPinCalls:: [Call] -- ^ The 'Call's to add
+               -> Call
 displayPinCalls calls = createCall (-3) "display pins" interBoxID (addNewIBoxCalls calls) id False "displayPinCalls"
 
--- | A call that removes all the pins in the interaction box
+-- | A 'Call' that removes all the 'Pin's in the interaction box
 resetInteractions:: Call
 resetInteractions = createCall (-4) "remove pins" interBoxID removeAllPins id False "resetInteractions"
 
--- | A call that removes given calls from the playground
-removeInteractionsPg:: [Call] -> Call
+-- | A 'Call' that removes given 'Call's from the 'Playground'
+removeInteractionsPg:: [Call] -- ^ The 'Call's to remove
+                    -> Call
 removeInteractionsPg inters = createCall (-5) "remove interactions" playgroundID theTask id False "removeInteractionsPg"
   where
     theTask:: UpdatePinboard
@@ -64,7 +67,10 @@ removeInteractionsPg inters = createCall (-5) "remove interactions" playgroundID
 
 -- # WITHOUT PLAYER # 
 
-changePg_noP:: String -> IO Playground -> String -> Call
+changePg_noP:: String -- ^ The description of the 'Playground'-change
+            -> IO Playground -- ^ The new 'Playground'
+            -> String -- ^ The save-name of this 'Call'
+            -> Call
 changePg_noP title newPg name = Call {
     id_c = -7,
     description = title,
@@ -85,18 +91,23 @@ changePg_noP title newPg name = Call {
 -- # WITH PLAYER # 
 
 -- | Change playground without changing the players position
-changePg:: String -> IO Playground -> String -> Call
+changePg:: String -- ^ The description of the 'Playground'-change
+        -> IO Playground -- ^ The new 'Playground'
+        -> String -- ^ The save-name of this 'Call'
+        -> Call
 changePg title newPg = createCall (-8) title playgroundID (changePgHelp title newPg) id False
 
 changePgHelp:: String -> IO Playground -> UpdatePinboard
 changePgHelp title newPg pb
   = do let player = head $ getPins playerModel_ID pb
-       executeCalls [
-         changePg' title (createObject $ setStatus True player) newPg
-        ] pb
+       executeCalls [changePg' title (createObject $ setStatus True player) newPg] pb
 
 -- | Change playground and change the players position
-changePgNewPos:: Offset -> String -> IO Playground -> String -> Call
+changePgNewPos:: Offset -- ^ The new start-index of the player model
+              -> String -- ^ The description of the 'Playground'-change
+              -> IO Playground -- ^ The new 'Playground'
+              -> String -- ^ The save-name of this 'Call'
+              -> Call
 changePgNewPos newPos title newPg = createCall (-8)
                  title
                  playgroundID
@@ -106,16 +117,19 @@ changePgNewPos newPos title newPg = createCall (-8)
 
 changePgHelp':: Offset -> String -> IO Playground -> UpdatePinboard
 changePgHelp' newPos title newPg pb
-    = do let player = alteredePlayer newPos.head $ getPins playerModel_ID pb
-         executeCalls [
-           changePg' title (createObject $ setStatus True player) newPg
-          ] pb
+    = do let player = alteredPlayer newPos.head $ getPins playerModel_ID pb
+         executeCalls [changePg' title (createObject $ setStatus True player) newPg] pb
 
-alteredePlayer:: Offset -> UpdatePin
-alteredePlayer newPos player
-  = snd $ runState (alterPin' $ \p -> p { startIndex = newPos } ) player
+-- | Move the player model
+alteredPlayer:: Offset -- ^ The new start-index of the player model
+              -> UpdatePin
+alteredPlayer newPos player = snd $ runState (alterPin' $ \p -> p { startIndex = newPos } ) player
 
-changePg':: String -> Object -> IO Playground -> Call
+-- | Change the 'Playground' while simultaneously adding the player model
+changePg':: String -- ^ The description of the 'Playground'-change
+         -> Object -- ^ The player model as an 'Object'
+         -> IO Playground -- ^ The new 'Playground'
+         -> Call
 changePg' title player newPb = Call {
     id_c = -9,
     description = title ++ "_execute",
@@ -135,31 +149,31 @@ changePg' title player newPb = Call {
 
 -- ## CHANGE PLAYGROUND WITH PLAYER - END ##
 
-
 -- ## HOT SWAP - PLAYGROUND ##
 
 -- # SWAP OBJECTS TEMPLATES #
 
 -- | Swap playground, keep the players position
-swapObj:: StartIndex
-       -> Call
+swapObj:: StartIndex -- ^ Player position
+       -> Call -- ^ The swap-'Call'
        -> (String, Dimension, StartIndex, [Call], Bool, Bool, [Item])
-swapObj sI swap
-  = (" ", (1, 1), sI, [swap], True, True, [])
+swapObj sI swap = (" ", (1, 1), sI, [swap], True, True, [])
 
 -- | Swap playground, keep the players position (with identifier)
-swapObj':: StartIndex
-        -> Call
-        -> Identifier
+swapObj':: StartIndex -- ^ Player position
+        -> Call -- ^ The swap-'Call'
+        -> Identifier -- ^ Identifier of the player object
         -> (String, Dimension, StartIndex, [Call], Bool, Bool, [Item], Identifier)
-swapObj' sI swap id
-  = (" ", (1, 1), sI, [swap], True, True, [], id)
+swapObj' sI swap id = (" ", (1, 1), sI, [swap], True, True, [], id)
 
 
 -- # HOT-SWAP CALLS #
 
 -- | Swap playground API
-swapPg:: UpdatePinboard -> String -> Call
+swapPg:: UpdatePinboard -- ^ Function that contains the swap-task as a nested 'Call'. See 'swapPgHelp' or 
+                        --   'swapPgHelpNewPos'.
+      -> String -- ^ The save-name of this 'Call'
+      -> Call
 swapPg f name = Call {
     id_c = -12,
     description = "playground hot swap",
@@ -177,15 +191,12 @@ swapPg f name = Call {
     tripwire = False
 }
 
-{-| 
-  Swap playground task: Executes nested call with the players current position
--}
-swapPgHelp:: IO Playground -> UpdatePinboard
+-- | Swap playground task: Executes nested 'Call' with the players current position
+swapPgHelp:: IO Playground -- ^ The new 'Playground'
+          -> UpdatePinboard
 swapPgHelp newPg pb
   = do let player = head $ getPins playerModel_ID pb
-       executeCalls [
-         swapPg' (createObject $ newCoord player) newPg
-        ] pb
+       executeCalls [swapPg' (createObject $ newCoord player) newPg] pb
   where
     newCoord:: UpdatePin
     newCoord player
@@ -194,16 +205,18 @@ swapPgHelp newPg pb
       | otherwise
       = player { startIndex = (fst.startIndex $ player, 72) }
 
--- | Swap playground task: Executes nested call with the players new position
-swapPgHelpNewPos:: Offset -> IO Playground -> UpdatePinboard
+-- | Swap playground task: Executes nested 'Call' with the players new position
+swapPgHelpNewPos:: Offset -- ^ New position of the player model
+                -> IO Playground -- ^ The new 'Playground'
+                -> UpdatePinboard
 swapPgHelpNewPos newCoord newPg pb
   = do let player = head $ getPins playerModel_ID pb
-       executeCalls [
-         swapPg' (createObject $ alteredePlayer newCoord player) newPg
-        ] pb
+       executeCalls [swapPg' (createObject $ alteredPlayer newCoord player) newPg] pb
 
--- | The playground-'hot-swap'-call (immediatly executed swap of the playground)
-swapPg':: Object -> IO Playground -> Call
+-- | The playground-'hot-swap'-call (immediatly executes swap of the playground)
+swapPg':: Object -- ^ The player model as an 'Object'
+       -> IO Playground -- ^ The new 'Playground'
+       -> Call
 swapPg' player newPg = Call {
     id_c = -13,
     description = "playground hot swap_execute",
@@ -225,7 +238,12 @@ swapPg' player newPg = Call {
 
 -- ## CHANGE PICTURE ##
 
-changePic:: String -> IO Picture -> Identifier -> String -> Call
+-- | Changes a 'Picture'
+changePic:: String -- ^ The description for the 'Picture'-change 
+         -> IO Picture -- ^ The new 'Picture'
+         -> Identifier -- ^ The ID of the target 'Picture' within the GUI
+         -> String -- ^ The save-name of this 'Call'
+         -> Call
 changePic title newPic targetPb name = Call {
     id_c = -7,
     description = title,
@@ -246,7 +264,11 @@ changePic title newPic targetPb name = Call {
 -- ## CHANGE PICTURE - END ##
 
 -- | A call that combines multiple strings to one text-call
-putMultTextCall:: Identifier -> String -> [String] -> String -> Call
+putMultTextCall:: Identifier -- ^ The 'Call'-ID
+               -> String -- ^ The 'Call'-description
+               -> [String] -- ^ The texts to display
+               -> String -- ^ The 'Call'-save-name
+               -> Call
 putMultTextCall id title texts = putMultTextCall' id title texts []
 
 putMultTextCall':: Identifier -> String -> [String] -> [Call] -> String -> Call
@@ -259,7 +281,11 @@ putMultTextCall' id title (text : ts) textCalls name
                        name
 
 -- | A call that displays text in the textbox
-putTextCall:: Identifier -> String -> String -> String -> Call
+putTextCall:: Identifier -- ^ The 'Call'-ID
+           -> String -- ^ The 'Call'-description
+           -> String -- ^ The text to display
+           -> String -- ^ The 'Call'-save-name
+           -> Call
 putTextCall id title text = putTextCall' id title text True
 
 putTextCall':: Identifier -> String -> String -> Bool -> String -> Call
@@ -280,7 +306,11 @@ putTextCall' ide title text dis name = Call {
     tripwire = False
 }
 
-putTextCall2:: Identifier -> String -> String -> String -> Call
+putTextCall2:: Identifier -- ^ The 'Call'-ID
+            -> String -- ^ The 'Call'-description
+            -> String -- ^ The text to display
+            -> String -- ^ The 'Call'-save-name
+            -> Call
 putTextCall2 id title text = putTextCall2' id title text True
 
 putTextCall2':: Identifier -> String -> String -> Bool -> String -> Call
@@ -302,11 +332,11 @@ putTextCall2' ide title text dis name = Call {
 }
 
 -- | A call that display a question in the textbox
-putQuestionCall:: Identifier
-               -> String
-               -> String
-               -> (String -> Call)
-               -> String
+putQuestionCall:: Identifier -- ^ The 'Call'-ID
+               -> String -- ^ The 'Call'-description
+               -> String -- ^ The question to display
+               -> (String -> Call) -- ^ A function that depends on the user input and acts as the games reaction
+               -> String -- ^ The 'Call'-save-name
                -> Call
 putQuestionCall ide title text f name = Call {
     id_c = ide,
@@ -326,10 +356,18 @@ putQuestionCall ide title text f name = Call {
 }
 
 -- | Moves the player instantly to 'newStartIndex'
-portPlayer:: String -> Offset -> String -> Call
+portPlayer:: String -- ^ The 'Call'-description 
+          -> Offset -- ^ The new position of the player model
+          -> String -- ^ The 'Call'-save-name
+          -> Call
 portPlayer = portObject playerModel_ID
 
-portObject:: Identifier -> String -> Offset -> String -> Call
+-- | Moves an Object to 'newStartIndex'
+portObject:: Identifier -- ^ The 'Object'-ID from the 'Object' that shall be moved
+          -> String -- ^ The 'Call'-description
+          -> Offset -- ^ The new position of the 'Object'
+          -> String -- ^ The 'Call'-save-name
+          -> Call
 portObject pinId title newStartIndex name = Call {
     id_c = -22,
     description = title,
@@ -352,7 +390,11 @@ portObject pinId title newStartIndex name = Call {
 
 
 -- | Player takes an item from another object
-takeItem:: String -> String -> Int -> String -> Call
+takeItem:: String -- ^ The 'Call'-description
+        -> String -- ^ The 'Item'-description
+        -> Int -- ^ The 'Object' from which to take the 'Item'
+        -> String -- ^ The 'Call'-save-name
+        -> Call
 takeItem title itemDesc id name = Call {
     id_c = -11,
     description = title,
@@ -377,7 +419,11 @@ takeItem title itemDesc id name = Call {
     getItems pg = [item | item <- inventory.head.getPins id $ pg
                         , description_item item == itemDesc ]
 
-dropItem:: String -> Item -> Int -> String -> Call
+dropItem:: String -- ^ The 'Call'-description
+        -> Item -- ^ The 'Item' to drop
+        -> Int -- ^ The 'Pin'-ID of the 'Pin' that contains the 'Item' to drop
+        -> String -- ^ The 'Call'-save-name
+        -> Call
 dropItem title item ide name = Call {
     id_c = -16,
     description = title,
@@ -408,9 +454,11 @@ dropItem title item ide name = Call {
              (_, newPb2) <- runStateT (alterPinboard $ addPins newPs') newPb
              return newPb2
 
--- | A call that executes a (Bool -> Call) depending on whether the player 
---   has a certain item
-chkItemCall:: String -> (Bool -> Call) -> String -> Call
+-- | A 'Call' that executes a '(Bool -> Call)' depending on whether the player has a certain 'Item'
+chkItemCall:: String -- ^ The 'Item' that shall be checked
+           -> (Bool -> Call) -- ^ The function to execute
+           -> String -- ^ The 'Call'-save-name
+           -> Call
 chkItemCall itemDesc f name = Call {
     id_c = -14,
     description = "Check Item",
@@ -434,7 +482,11 @@ chkItemCall itemDesc f name = Call {
                decider = itemDesc `elem` map description_item (inventory player)
            executeCalls [setNested True $ f decider] pb
 
-chkMultItemsCall:: [String] -> ([String] -> Call) -> String -> Call
+-- | A 'Call' that executes a '(Bool -> Call)' depending on whether the player has a multiple 'Item's
+chkMultItemsCall:: [String] -- ^ The 'Item's that shall be checked
+                -> ([String] -> Call) -- ^ The function to execute
+                -> String -- ^ The 'Call'-save-name
+                -> Call
 chkMultItemsCall items f name = Call {
     id_c = -14,
     description = "Check Item",
@@ -459,11 +511,14 @@ chkMultItemsCall items f name = Call {
                decider = filter (`elem` playerInv) items
            executeCalls [setNested True $ f decider] pb
 
-{-|
-    Either displays an 'end-of-chapter'-message to the player
-    or changes the playground to the next chapter.
--}
-chapterTransitionCall:: String -> String -> Int -> String -> Call
+-- | Either displays an 'end-of-chapter'-message to the player or changes the 'Playground' to the next chapter.
+chapterTransitionCall:: String -- ^ The 'Call'-description
+                     -> String -- ^ The 'end-of-chapter'-text
+                     -> Int -- ^ The index of the 'Playground' in the 'transitionRegister' to which the game shall 
+                            --   change. If this index refers to a non-existing entry, the end-of-chapter text will be
+                            --   displayed instead.
+                     -> String -- ^ The 'Call'-save-name
+                     -> Call
 chapterTransitionCall title endText pgNumber name = Call {
     id_c = -15,
     description = title,
@@ -491,8 +546,12 @@ chapterTransitionCall title endText pgNumber name = Call {
                     ] pb
                else executeCalls [setNested True $ changePg title newPg ""] pb
 
--- | Moves an object step by step
-moveObjectCall:: String -> Identifier -> (Int, Int) -> String -> Call
+-- | Moves an 'Object' step by step by adding speed to it
+moveObjectCall:: String -- ^ The 'Call'-description
+              -> Identifier -- ^ The ID of the target 'Object'
+              -> (Int, Int) -- ^ The horizontal and vertical speed for the target 'Object'
+              -> String -- ^ The 'Call'-save-name
+              -> Call
 moveObjectCall title targetId speed name = Call {
     id_c = -16,
     description = title,
@@ -510,8 +569,11 @@ moveObjectCall title targetId speed name = Call {
     tripwire = False
 }
 
--- | Remove an object from the playground
-removeObjectCall:: String -> Identifier -> String -> Call
+-- | Remove an 'Object' from the playground
+removeObjectCall:: String -- ^ The 'Call'-description
+                -> Identifier -- ^ The ID of the 'Object' to remove
+                -> String -- ^ The 'Call'-save-name
+                -> Call
 removeObjectCall title targetId name = Call {
     id_c = -17,
     description = title,
@@ -533,10 +595,12 @@ removeObjectCall title targetId name = Call {
                         printPinboardNoLoop newPb pb
                         return newPb
 
-{-|
-    Choose a call depending on the players position
--}
-chkPositionCall:: String -> Identifier -> (Offset -> Call) -> String -> Call
+-- | Choose a call depending on the 'Objects' position
+chkPositionCall:: String -- ^ The 'Call'-description
+               -> Identifier -- ^ The 'Object'-ID
+               -> (Offset -> Call) -- ^ The function to execute
+               -> String -- ^ The 'Call'-save-name
+               -> Call
 chkPositionCall title targetId f name = Call {
     id_c = -18,
     description = title,
@@ -558,8 +622,9 @@ chkPositionCall title targetId f name = Call {
                             playerPos = startIndex player
                         executeCalls [setNested True $ f playerPos] pb
 
--- | Prints the inventory of the pin with the id 'pinId'
-showInventory:: Identifier -> Call
+-- | Prints the inventory a 'Pin'
+showInventory:: Identifier -- ^ The ID of the 'Pin' from which to display the inventory
+             -> Call
 showInventory pinId = Call {
     id_c = -19,
     description = "",
@@ -584,8 +649,12 @@ showInventory pinId = Call {
                print inv
                return pb
 
--- | Determine which call is executed at the hand of the visibility of an item
-chkItmVisCall:: String -> Item -> (Bool -> Call) -> String -> Call
+-- | Determine which 'Call' is executed at the hand of the visibility of an 'Item'
+chkItmVisCall:: String -- ^ The 'Call'-description
+             -> Item -- ^ The 'Item' to check for
+             -> (Bool -> Call) -- ^ The function to execute
+             -> String -- ^ The 'Call'-save-name
+             -> Call
 chkItmVisCall title item f name = Call {
     id_c = -20,
     description = title,
@@ -610,12 +679,13 @@ chkItmVisCall title item f name = Call {
                      isVisible = and [display_item i | i <- inv, i == item]
                  executeCalls [setNested True $ f isVisible] pb
 
-changeGridInLoop:: String
-                -> (Int, Int)
-                -> [String] 
-                -> Int
-                -> Identifier 
-                -> String 
+-- | Change the appearence of a 'Pin' in a loop 
+changeGridInLoop:: String -- ^ The 'Call'-description
+                -> (Int, Int) -- ^ The dimension of the 'Grid'
+                -> [String] -- ^ The appearences of the 'Grid' which we loop through
+                -> Int -- ^ The amount of steps through the loop
+                -> Identifier -- ^ The ID of the 'Pin' which shall change the appearence
+                -> String -- ^ The 'Call'-save-name
                 -> Call
 changeGridInLoop title dim (init : res) repititions pinId name
   = Call {

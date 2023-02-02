@@ -7,6 +7,10 @@ import GameEngine.Call (identityCall, Call(..) )
 
 type StartIndex = (Int, Int)
 
+{-|
+    An item can be carried by any object (including but not limited to the player). It can
+    carry 'Call's which can be executed when using the item.
+-}
 data Item = Item {
     description_item :: String,
     belongsTo :: String,
@@ -21,6 +25,7 @@ instance Eq Item where
 instance Show Item where
     show item = description_item item
 
+-- | A placeholder item.
 placeHolderItem:: Item
 placeHolderItem = Item {
     description_item = "",

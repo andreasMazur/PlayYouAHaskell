@@ -11,6 +11,7 @@ import GameEngine.SaveGameParser ( parseSaveGameFile )
 
 type Identifier = Int
 
+-- | The 'Call' for loading the savegame-file
 loadGame:: Call
 loadGame = Call {
     id_c = -3141,
@@ -29,6 +30,7 @@ loadGame = Call {
     tripwire = False
 }
 
+-- | The function that loads the savegame-file
 gameLoader:: UpdatePinboard
 gameLoader pb 
     = do (newPg, newMultiUseBox, newInterBox, newTextBox, newControlsMenu, newDebugWindow ) <- parseSaveGameFile
@@ -43,5 +45,8 @@ gameLoader pb
         loadsofText = "Lädt.. [ Kann einen Augenblick dauern, nicht wild\
                       \ rumtippen;) ]"
 
-loadWindow:: Identifier -> IO Picture -> Call
+-- | The 'Call' that exchanges an old picture with a new picture
+loadWindow:: Identifier -- ^ The window-ID
+          -> IO Picture -- ^ The new picture
+          -> Call
 loadWindow ide newPic = setNested True $ changePic "" newPic ide ""

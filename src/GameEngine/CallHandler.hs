@@ -27,8 +27,7 @@ import Physics.Collision ( collides )
 import Data.List ((\\))
 import Physics.AABB ( AABB(maxY) )
 
--- | The call-handler acts as intermediary for the instructions sent by the
---   pinboards of the gui.  
+-- | The call-handler acts as intermediary for the instructions sent by the pinboards of the gui.
 callHandler:: StateT GUI IO GUI
 callHandler
     = do initGui <- get
@@ -55,7 +54,9 @@ callHandler
          modify $ resetCalls newCs
          return initGui
 
-exchangePg:: [Call] -> StateT GUI IO GUI
+-- | Exchanges the playground
+exchangePg:: [Call] -- ^ The calls that contain the new playgrounds
+          -> StateT GUI IO GUI
 exchangePg [] = do gui <- get
                    put gui
                    return gui
@@ -65,7 +66,9 @@ exchangePg (call : cs) = do gui <- get
                             put gui { playground = newPg }
                             exchangePg cs
 
-exchangePic:: [Call] -> StateT GUI IO GUI
+-- | Exchanges the pinboard
+exchangePic:: [Call] -- ^ The calls that contain the new picture
+           -> StateT GUI IO GUI
 exchangePic [] = do gui <- get
                     put gui
                     return gui
@@ -76,7 +79,10 @@ exchangePic (call : cs) = do gui <- get
                                                $ windows gui }
                              exchangePic cs
 
-insertNewPic:: Picture -> [Picture] -> [Picture]
+-- | Exchanges the correct picture with a new one in a list of pictures
+insertNewPic:: Picture -- ^ The picture to insert
+            -> [Picture] -- ^ A list of pictures
+            -> [Picture]
 insertNewPic newPic [] = [newPic]
 insertNewPic newPic (oldPic : ps)
     | Pic.identifier newPic == Pic.identifier oldPic = newPic : ps
@@ -85,18 +91,19 @@ insertNewPic newPic (oldPic : ps)
 -- ## RESET CALLS ##
 
 -- | Resets all call-lists from each window of the GUI
--- | 'GUI' : The GUI from which the windows's calls shall be resetted
-resetCalls:: [Call] -> GUI -> GUI
+resetCalls:: [Call] -- ^ The new calls that shall exist after the reset
+          -> GUI -- ^ The GUI from which the windows's calls shall be resetted
+          -> GUI
 resetCalls nestedCalls gui = gui {
     playground = head $ assignCalls defaultCalls [playground gui],
     windows = assignCalls defaultCalls $ windows gui
 }
     where
-        -- | DEFAULT CALLS: Calls are made every iteration.
+        -- DEFAULT CALLS: Calls are made every iteration.
         defaultCalls:: [Call]
         defaultCalls = [displayItems] ++ nestedCalls
 
-        -- | Default call no. 1 : Display player items
+        -- Default call no. 1 : Display player items
         displayItems:: Call
         displayItems = Call {
                 id_c = -100,
@@ -153,14 +160,20 @@ resetCalls nestedCalls gui = gui {
                        , collides obj (objects pg \\ [obj]) ) | obj <- objects pg
                                       , id_pin (object obj) == playerModel_ID]
 
-        -- | Add more default calls below here
+        -- Add more default calls below here
 
-assignCalls:: Pinboard a => [Call] -> [a] -> [a]
+-- | Assign a list of calls to their correct initiator pinboards
+assignCalls:: Pinboard a => [Call] -- ^ The calls to assign
+                         -> [a] -- ^ The pinboards to which the calls shall be assigned
+                         -> [a]
 assignCalls _ [] = []
 assignCalls calls (pb : pbs)
     = assignCallsHelp calls (setCalls [] pb) : assignCalls calls pbs
 
-assignCallsHelp:: Pinboard a => [Call] -> a -> a
+-- | Assign a list of calls to one pinboard, if the pinboard is the initiator
+assignCallsHelp:: Pinboard a => [Call] -- ^ The calls to assign
+                             -> a -- ^ The pinboard to which the calls shall be assigned
+                             -> a
 assignCallsHelp [] pb = pb
 assignCallsHelp (call : cs) pb
     | id_pb pb == initiator call = assignCallsHelp cs $ addCalls [call] pb
@@ -169,32 +182,32 @@ assignCallsHelp (call : cs) pb
 -- ## GET CALLS ##
 
 -- | Gathers all calls from each window of the GUI
---   'GUI' : The GUI from which the calls should be gathered
-retreiveCalls:: GUI -> [Call]
-retreiveCalls gui
-    = (calls.playground $ gui) ++ concatMap Pic.calls (windows gui)
+retreiveCalls:: GUI -- ^ The GUI from which the calls should be gathered
+             -> [Call]
+retreiveCalls gui = (calls.playground $ gui) ++ concatMap Pic.calls (windows gui)
 
 -- ## INTERACTIONS-HANDLING ##
 
--- | Exchanges the playground of the gui with the updated playground,
---   on which the interactions have been applied to.
--- | '[Call]' : The interactions to be applied
--- | 'GUI'    : The GUI to be modified
-executeInteractions:: [Call] -> GUI -> GUI
-executeInteractions calls gui
-    = gui { playground = applyInteractions calls $ playground gui }
+{-|
+    Exchanges the playground of the gui with an updated playground,
+    on which the interactions have been applied to.
+-}
+executeInteractions:: [Call] -- ^ The interactions to be applied
+                   -> GUI -- ^ The GUI to be modified
+                   -> GUI
+executeInteractions calls gui = gui { playground = applyInteractions calls $ playground gui }
 
 -- | Applies all interactions onto the playground
--- | '[Call]' : The interactions to be applied
-applyInteractions:: [Call] -> UpdatePlayground
+applyInteractions:: [Call] -- ^ The interactions to be applied
+                 -> UpdatePlayground
 applyInteractions cs pg = foldl (flip interaction) pg cs
 
 -- ## CALL-HANDLING ##
 
--- | Initiates the execution of the calls onto the gui.
--- | '[Call]' : The (pin-)calls to be applied
--- | 'GUI'    : The gui, which gets modified
-executeCalls:: [Call] -> GUI -> IO GUI
+-- | Initiates the execution of the calls
+executeCalls:: [Call] -- ^ The (pin-)calls to be applied
+            -> GUI -- ^ The GUI, which gets modified
+            -> IO GUI
 executeCalls calls gui
     = do [newPlayground] <- applyCalls calls [playground gui]
          newWindows <- applyCalls calls $ windows gui
@@ -203,20 +216,22 @@ executeCalls calls gui
              windows = newWindows
          }
 
--- | Replaces the old windows with new windows.
--- | '[Call]' : The (pin-)calls to be applied
--- | '[a]'    : The windows to modify
-applyCalls:: Pinboard a => [Call] -> [a] -> IO [a]
+-- | Replaces the old windows with new windows
+applyCalls:: Pinboard a => [Call] -- ^ The (pin-)calls to be applied
+                        -> [a] -- ^ The pinboards to modify
+                        -> IO [a]
 applyCalls [] windows = return windows
 applyCalls (call : cs) windows
     = do newWindows <- sequence.callPbs call $ windows
          applyCalls cs newWindows
 
--- | Applies the call onto a pinboard, if the pinboards id corresponds
---   to the receiver of the call.
--- | 'Call' : The call to be applied
--- | '[a]'  : The list of considered pinboards
-callPbs:: Pinboard a => Call -> [a] -> [IO a]
+{-|
+    Applies the call onto a pinboard, if the pinboards ID corresponds
+    to the receiver of the call.
+-}
+callPbs:: Pinboard a => Call -- ^ The call to be applied
+                     -> [a] -- ^ The list of considered pinboards
+                     -> [IO a]
 callPbs _ [] = []
 callPbs call (pb : pbs)
     | id_pb pb == receiver call = task call pb : callPbs call pbs

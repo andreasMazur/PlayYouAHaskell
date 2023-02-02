@@ -14,9 +14,11 @@ import GameConfig.UserInterface (
 
 type Identifier = Int
 
+-- | The path to the savegame-file
 saveGamePath:: FilePath
 saveGamePath = "./app/saveGame"
 
+-- | The 'Call' for saving the current game
 saveGame:: Call
 saveGame = Call {
     id_c = -314,
@@ -35,6 +37,7 @@ saveGame = Call {
     tripwire = False
 }
 
+-- | The function to save all 'Pinboard's
 saveGame':: UpdatePinboard
 saveGame' pb = do writeFile saveGamePath ""
                   executeCalls [ savePinboard playgroundID
@@ -44,6 +47,7 @@ saveGame' pb = do writeFile saveGamePath ""
                                , savePinboard controlsMenuID
                                , savePinboard debugWindowID ] pb
 
+-- | Saves a 'Pinboard'
 savePinboard:: Identifier -> Call
 savePinboard re = Call {
     id_c = -3141,
@@ -62,6 +66,7 @@ savePinboard re = Call {
     tripwire = False
 }
 
+-- | Writes a savegame-file
 savePinboard':: UpdatePinboard
 savePinboard' pb = do appendFile saveGamePath $ show pb  -- write new save-game
                       return pb

@@ -31,6 +31,13 @@ type Identifier = Int
 type Dimension = (Int, Int)
 type StartIndex = (Int, Int)
 
+{-|
+    A 'Playground' represents an environment in which physics actively
+    affect the elements the environment contains. The purpose of the
+    'Playground' environment is that it shall represent the main game,
+    in which the player moves and interacts with the elements in the
+    environment.
+-}
 data Playground = Playground {
     background :: Pin,
     objects :: [Object],
@@ -56,14 +63,17 @@ instance Eq Playground where
 
 -- ## MISC ##
 
-addObject:: Object -> IO Playground -> IO Playground
+-- | Add an 'Object' to the 'Playground'
+addObject:: Object -- ^ The 'Object' to add
+         -> IO Playground  -- ^ The 'Playground' in which the 'Object' shall be added
+         -> IO Playground
 addObject newObj newPg = do pg <- newPg
                             return $ pg { objects = newObj : objects pg }
 
 -- | Wrapperfunction for interactions, which only affect a single object
--- | 'id' : The id of the object, that shall be modified
--- | 'UpdateObject' : The function, which shall be applied on the target object
-applyOnObject:: Identifier -> UpdateObject -> UpdatePlayground
+applyOnObject:: Identifier -- ^ The ID of the 'Object', that shall be modified
+             -> UpdateObject -- ^ The function, which shall be applied on the target 'Object'
+             -> UpdatePlayground
 applyOnObject id f pg = pg { objects = map onObject $ objects pg }
     where
         onObject:: UpdateObject
@@ -91,7 +101,6 @@ exchangePinboard pin playground = playground { background = pin }
 exchangeObjects:: [Object] -> UpdatePlayground
 exchangeObjects os pg = pg { objects = os }
 
--- TODO
 exchangePins:: [Pin] -> UpdatePlayground
 exchangePins pins playground
     = playground { objects = map (adjustVel . createObject) pins }
@@ -117,10 +126,12 @@ getPlayer = getObject playerModel_ID
 
 -- ## INSTANTIATION ##
 
-createPlayground:: String
-                -> String
-                -> [Call]
-                -> [(String, Dimension, StartIndex, [Call], Bool, Bool, [Item])]
+-- | Creates a 'Playground' and its 'Object's
+createPlayground:: String -- ^ The appearence of the 'Playground'
+                -> String -- ^ The name of the 'Playground'
+                -> [Call] -- ^ The initial 'Call's the 'Playground' shall contain
+                -> [(String, Dimension, StartIndex, [Call], Bool, Bool, [Item])] -- ^ Information for the 'Objects'
+                                                                                 --   contained in the 'Playground
                 -> IO Playground
 createPlayground appearence desc calls pinInformation
     = do let ids = [0..length pinInformation] \\ [playerModel_ID]
@@ -136,7 +147,13 @@ createPlayground appearence desc calls pinInformation
             description = desc
          }
 
-createPlaygroundWithPins:: String -> String -> [Pin] -> [Call] -> IO Playground
+-- | Creates a 'Playground'
+createPlaygroundWithPins:: String -- ^ The appearence of the 'Playground'
+                        -> String -- ^ The name of the 'Playground'
+                        -> [Pin] -- ^ The 'Pin's that shall be converted to 'Object's which are then contained in the
+                                 --   'Playground'
+                        -> [Call] -- ^ The initial 'Call's the 'Playground' shall contain
+                        -> IO Playground
 createPlaygroundWithPins appearence desc pins calls
     = do pb <- createPin' appearence playgroundDim playgroundStartIndex 0 []
          return $ Playground {
@@ -147,7 +164,12 @@ createPlaygroundWithPins appearence desc pins calls
             description = desc
          }
 
-createPlaygroundWithPin:: (IO Pin) -> String -> [Object] -> [Call] -> IO Playground
+-- | Creates a 'Playground' with a given 'Pin' as the background
+createPlaygroundWithPin:: (IO Pin) -- ^ The 'Pin' used as a background
+                       -> String -- ^ The name of the 'Playground'
+                       -> [Object] -- ^ The 'Object's contained in the 'Playground'
+                       -> [Call] -- ^ The initial 'Call's the 'Playground' shall contain
+                       -> IO Playground
 createPlaygroundWithPin bg desc os calls
     = do pb <- bg
          return Playground {
@@ -158,11 +180,16 @@ createPlaygroundWithPin bg desc os calls
              description = desc
          }
 
-createPlaygroundWithIds:: String
-                  -> String
-                  -> [Call]
-                  -> [(String, Dimension, StartIndex, [Call], Bool, Bool, [Item], Identifier)]
-                  -> IO Playground
+-- | Creates a 'Playground' while considering the given ID's for the 'Object's
+createPlaygroundWithIds:: String -- ^ The appearence of the 'Playground'
+                       -> String -- ^ The name of the 'Playground'
+                       -> [Call] -- ^ The initial 'Call's the 'Playground' shall contain
+                       -> [(String, Dimension, StartIndex, [Call], Bool, Bool, [Item], Identifier)] -- ^ Information for
+                                                                                                    --   the 'Objects'
+                                                                                                    --   contained in
+                                                                                                    --   the
+                                                                                                    --   'Playground'
+                       -> IO Playground
 createPlaygroundWithIds appearence desc calls pinInformation
     = do let io_ps = [ createPin str dim si id cs fixed inBg items
                      | (str, dim, si, cs, fixed, inBg, items, id) <- pinInformation]

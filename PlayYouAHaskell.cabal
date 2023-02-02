@@ -1,0 +1,113 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           PlayYouAHaskell
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/andreasMazur/PlayYouAHaskell#readme>
+homepage:       https://github.com/andreasMazur/PlayYouAHaskell#readme
+bug-reports:    https://github.com/andreasMazur/PlayYouAHaskell/issues
+author:         Andreas Mazur
+maintainer:     Andreas Mazur
+copyright:      2021 Andreas Mazur
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/andreasMazur/PlayYouAHaskell
+
+library
+  exposed-modules:
+      GameConfig.KeyBindings
+      GameConfig.PlayerModel
+      GameConfig.StartMenu
+      GameConfig.UserInterface
+      GameEngine.BufferFix
+      GameEngine.Call
+      GameEngine.CallHandler
+      GameEngine.CallRegister
+      GameEngine.GameLoop
+      GameEngine.Grid
+      GameEngine.GUI
+      GameEngine.Item
+      GameEngine.ItemRegister
+      GameEngine.Menu
+      GameEngine.Object
+      GameEngine.Picture
+      GameEngine.Pin
+      GameEngine.Pinboard
+      GameEngine.PinboardUtilities
+      GameEngine.PinUtilities
+      GameEngine.Playground
+      GameEngine.RegisterHandler
+      GameEngine.Save
+      GameEngine.SaveGameLoad
+      GameEngine.SaveGameParser
+      GameEngine.StandardCalls
+      GameEngine.Terminal
+      GameEngine.Textbox
+      GameEngine.TransitionRegister
+      GameEngine.UserInput
+      Lib
+      Physics.AABB
+      Physics.Collision
+      Physics.Gravity
+      Physics.MovementV2
+      Physics.PhysicsHandler
+  other-modules:
+      Paths_PlayYouAHaskell
+  hs-source-dirs:
+      src
+  build-depends:
+      ansi-terminal
+    , array
+    , base >=4.7 && <5
+    , directory
+    , linear
+    , mtl
+    , parsec
+  default-language: Haskell2010
+
+executable PlayYouAHaskell-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_PlayYouAHaskell
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      PlayYouAHaskell
+    , ansi-terminal
+    , array
+    , base >=4.7 && <5
+    , directory
+    , linear
+    , mtl
+    , parsec
+  default-language: Haskell2010
+
+test-suite PlayYouAHaskell-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_PlayYouAHaskell
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      PlayYouAHaskell
+    , ansi-terminal
+    , array
+    , base >=4.7 && <5
+    , directory
+    , linear
+    , mtl
+    , parsec
+  default-language: Haskell2010

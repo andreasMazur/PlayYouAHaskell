@@ -16,9 +16,13 @@ import GameEngine.Terminal (resetCursor)
 textPinDim:: (Int, Int)
 textPinDim = (fst textBoxDim-2, snd textBoxDim)
 
--- | Displays a given text in the textbox of the game. Then, it waits for a
---   userinput, which is used to determine which call shall be execeuted.
-displayQuestion:: String -> (String -> Call) -> UpdatePinboard
+{-|
+    Displays a question in the textbox of the game. Then, it waits for a user-input, which is used to determine which
+    'Call' shall be execeuted.
+-}
+displayQuestion:: String -- ^ The question to display
+               -> (String -> Call) -- ^ The function to execute
+               -> UpdatePinboard
 displayQuestion text f pb
     = do -- create the text-pin
          textPin <- createTextPin text
@@ -40,8 +44,9 @@ displayQuestion text f pb
          return $ exchangeBackground
               (forcePrintPin.background $ newPb4) newPb4
 
--- | Displays a given text in the textbox of the game
-displayText:: String -> UpdatePinboard
+-- | Displays a text in the textbox of the game
+displayText:: String -- ^ The text to display
+           -> UpdatePinboard
 displayText text pb = do -- create the text-pin
                          textPin <- createTextPin text
                          -- add the text-pin to the textbox
@@ -56,8 +61,9 @@ displayText text pb = do -- create the text-pin
                          clearPinboard (newPb, newPb2)
                          return newPb2
 
--- | Displays a given text in the textbox of the game
-displayText':: String -> UpdatePinboard
+-- | Displays a text in the textbox of the game
+displayText':: String -- ^ The text to display
+            -> UpdatePinboard
 displayText' text pb = do -- create the text-pin
                           textPin <- createTextPin text
                           -- add the text-pin to the textbox
@@ -67,32 +73,39 @@ displayText' text pb = do -- create the text-pin
                           -- remove the text-pin from the pinboard
                           removePins [0] newPb
 
-createTextPin:: String -> IO Pin
+-- | Converts a text into a 'Pin' which can be added into the textbox-'Pinboard'
+createTextPin:: String -- ^ The text to convert into a 'Pin'
+             -> IO Pin
 createTextPin text = createPin' (fillMissing.fitText $ text) textPinDim (0, 0) 0 []
 
--- | Adds spaces to a given text, such that the text contains enough characters
---   for the text-pin
-fillMissing:: String -> String
-fillMissing text
-    = text ++ [' ' | _ <- [1..uncurry (*) textPinDim - length text]]
+-- | Adds spaces to a given text, such that the text contains enough characters for the text-'Pin'
+fillMissing:: String -- ^ 
+           -> String
+fillMissing text = text ++ [' ' | _ <- [1..uncurry (*) textPinDim - length text]]
 
-fitText:: String -> String
+-- | Fits the text to display to the size of the textbox
+fitText:: String -- ^ The text to display
+       -> String
 fitText text = createRows preProcessedText
     where
         preProcessedText:: [String]
         preProcessedText = map (++ " ").words $ text
 
-createRows:: [String] -> String
+-- | Creates multiple rows 
+createRows:: [String] -- ^ The words to display
+          -> String
 createRows [] = []
 createRows words = row ++ createRows residualWords
     where
         (row, residualWords) = createRow words ("", 0)
 
-createRow:: [String] -> (String, Int) -> (String, [String])
+-- | Creates a row from words to display depending with respect to the textbox-size
+createRow:: [String] -- ^ The words to display
+         -> (String, Int) -- ^ The previous words within the row
+         -> (String, [String])
 createRow [] (row, _) = (row, [])
 createRow (word : ws) (prevWords, takenSpace)
     | takenSpace + length word < snd textBoxDim
     = createRow ws (prevWords ++ word, takenSpace + length word)
     | otherwise
     = (prevWords ++ [' ' | _ <- [1..snd textBoxDim - takenSpace]], word : ws)
-

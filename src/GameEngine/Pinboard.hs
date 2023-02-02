@@ -9,10 +9,10 @@ type Identifier = Int
 type StartIndex = (Int, Int)
 type UpdatePinboard = forall a. Pinboard a => a -> IO a
 
--- | The pinboard is the foundation of the game.
---   Each pinboard contains 'Pin's which are desribed below.
---   Furthermore, the GUI contains multiple pinboards, and each
---   pinboard can communicate with the other pinboards.
+{-|
+    PYaH's GUI contains multiple 'Pinboard's. Each 'Pinboard' can contain 'Pin's, which describe elements in the 
+    environment. Additionally, 'Pinboard's communicate with other 'Pinboard's via 'Call's.
+-}
 class (Show a, Eq a) => Pinboard a where
     background :: a -> Pin
     exchangeBackground :: Pin -> a -> a
@@ -24,4 +24,3 @@ class (Show a, Eq a) => Pinboard a where
     setCalls :: [Call] -> a -> a
     getCalls :: a -> [Call]
     description_pb :: a -> String
-

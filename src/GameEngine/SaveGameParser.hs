@@ -21,6 +21,7 @@ import GameEngine.RegisterHandler (loadItem, loadCall)
 
 -- ## API ##
 
+-- | The path where to store the savegame-file
 saveGameFilePath:: FilePath
 saveGameFilePath = "./app/saveGame"
 
@@ -31,6 +32,7 @@ type SaveGame = ( IO Playground
                 , IO Picture
                 , IO Picture )
 
+-- | Loads the savegame-file
 parseSaveGameFile:: IO SaveGame
 parseSaveGameFile 
     = do result <- parseFromFile saveGameFileParser saveGameFilePath
